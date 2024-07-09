@@ -2,11 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
-from spreadsheet import get_values, update_sheet
+from spreadsheet import get_vals, update_sheet
 import google.auth
 from typing import List
 from pydantic import BaseModel
-from model import create_element, num_docs
+from model import db, create_element, num_docs, link_docs
 
 load_dotenv()
 
@@ -31,9 +31,9 @@ app.add_middleware(
 def home():
     return {"data": "rehaan"}
 
-@app.get("/getvals")
-async def get_vals():
-    return get_values()
+@app.get("/getvals/{collection}")
+async def get_values(collection: str):
+    return get_vals(collection)
 
 # Length of values list can be as many, as long as values[0] is always the "FROM" element, it can have as many "TO" elements as it wants
 # Row should always be the last row (updates to (row + 1)).
@@ -45,9 +45,11 @@ class Values(BaseModel):
     row: int
     col_ind: int
 
-@app.post("/updatevals/")
-async def update_vals(values: Values):
+@app.post("/linkdocs/")
+async def link_connections(values: Values):
     print(f"50 - {values}")
+    doc_count = num_docs("Connections")
+    values.row = doc_count + 1
     try:
         # SHOULD FIRST UPDATE THE FIREBASE DATABASE, AND THEN THE UPDATE_VALUES FUNCTION CAN JUST UPDATE THE SPREADSHEET RELATIVE TO THE CHANGES THAT ARE FOUND IN THE DATABASE.
             # - But the question remains -> What is the best way to store the data?
@@ -58,6 +60,17 @@ async def update_vals(values: Values):
                         # - Label, Type, Description
                     # - There should be a separate collection for Tags, as these will probably be getting updated more frequently than the others, and are not specific to single Elements.
                         # - For now I am just using a string specific to each Element. -> Will have to fix this later, etc.
+
+        from_el = ""
+        rest_vals = []
+        if values.col_ind == 0:
+            from_el = values.vals[0]
+            rest_vals = values.vals[1::]
+        
+        try:
+            result = link_docs(from_el, rest_vals)
+        except Exception as e:
+            return {"status": f"Failure to link_docs {e}"}
         update_sheet(os.environ.get("CONNECTIONS_ID"), values.vals, values.row, values.col_ind)
         return {"status": "Success"}
     except Exception as e:
@@ -70,7 +83,7 @@ class Label(BaseModel):
     type: str
 
 @app.post("/createlabel/")
-def update_model(label: Label):
+async def update_model(label: Label):
     try:
         print(f"75 - {label}")
         result = create_element(label.description, label.label, label.tags, label.type)

@@ -17,7 +17,15 @@ firebaseConfig = {
 
 db = firestore.client()
 
-def num_docs(collection):    
+# EACH ROW IS ONE DOCUMENT
+    # - In Elements, the name of each document is the Label cell
+    # - In Connections, the name of each document is the From cell
+
+def find_ref(collection, document):
+    return db.collection(collection).document(document)
+
+def num_docs(collection):
+
     collection_ref = db.collection(collection)
 
     docs = collection_ref.stream()
@@ -46,3 +54,33 @@ def create_element(description, label, tags, type):
         return {"status": f"Success: {result}"}
     except Exception as e:
         return {"status": f"Failure: {e}"}
+    
+def link_docs(from_el, to_els):
+    # When a new Connection is formed, it should check against the current Elements to see if those Elements exit.
+        # - If they exist, then carry on as usual.
+        # - If they don't exist, then CREATE them.
+
+    from_el_ref = ""
+    to_els_refs = []
+
+    # Finds the reference to the correct elements:
+    try:
+        # From Element reference:
+        from_el_ref = find_ref("Elements", from_el)
+
+        # To Elements references:
+        for el in to_els:
+            to_els_refs.append(find_ref("Elements", el))
+    except Exception as e:
+        return {"status": f"Failed to find from_el: {e}"}
+
+    try:
+        result = db.collection("Connections").document(from_el).set(
+            {
+                "From": from_el_ref,
+                "To": to_els_refs
+            }
+        )
+        return {"status": "Successfully linked docs"}
+    except Exception as e:
+        return {"status": f"Failure to link_docs: {e}"}

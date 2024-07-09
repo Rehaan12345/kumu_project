@@ -7,13 +7,15 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 def authenticate_sheets(api_key):
     return build('sheets', 'v4', developerKey=api_key).spreadsheets()
 
-def get_values():
+def get_vals(collection):
     sheets = authenticate_sheets(os.environ.get("SHEETS_API"))
     # Assuming a maximum of 23 "TO" elements for each "FROM" (Z) -> If we ever reach more, simple adjust "Z" to be higher, etc.
-    result = sheets.values().get(spreadsheetId=os.environ.get("SHEET_ID"), range = "Connections!A2:Z100000000").execute()
-    values = result.get("values")
-
-    return values
+    try:
+        result = sheets.values().get(spreadsheetId=os.environ.get("SHEET_ID"), range = f"{collection}!A2:Z100000000").execute()
+        values = result.get("values")
+        return values
+    except Exception as e:
+        return {"status": f"Failure to get_vals: {e}"}
 
 def update_sheet(collection_id, values, row, col_ind):
 
