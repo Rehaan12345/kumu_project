@@ -33,7 +33,11 @@ def home():
 
 @app.get("/getvals/{collection}")
 async def get_values(collection: str):
-    return get_vals(collection)
+    try:
+        values = get_vals(collection)
+        return {"status": values}
+    except Exception as e:
+        return {"status": "Failure"}
 
 # Length of values list can be as many, as long as values[0] is always the "FROM" element, it can have as many "TO" elements as it wants
 # Row should always be the last row (updates to (row + 1)).

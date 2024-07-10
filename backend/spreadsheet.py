@@ -13,6 +13,7 @@ def get_vals(collection):
     try:
         result = sheets.values().get(spreadsheetId=os.environ.get("SHEET_ID"), range = f"{collection}!A2:Z100000000").execute()
         values = result.get("values")
+        print(f"16 - {values}")
         return values
     except Exception as e:
         return {"status": f"Failure to get_vals: {e}"}
@@ -20,12 +21,6 @@ def get_vals(collection):
 def update_sheet(collection_id, values, row, col_ind):
 
     # col_ind == 0 means that values[0] is "FROM", otherwise, the whole of values is just "TO"
-
-    # try:
-    #     if col_ind == 0:
-    #         create_doc("All", values)
-    # except Exception as e:
-    #     return {"status": f"Failed to update_sheet in db: {e}"}
 
     sheets = authenticate_sheets(os.environ.get("SHEETS_API"))
 
